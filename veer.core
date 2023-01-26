@@ -21,12 +21,17 @@ filesets:
       - design/dec/dec_decode_ctl.sv
       - design/dec/dec_gpr_ctl.sv
       - design/dec/dec_ib_ctl.sv
+      - design/dec/dec_pr_ctl.sv
       - design/dec/dec_tlu_ctl.sv
       - design/dec/dec_trigger.sv
       - design/dec/dec.sv
       - design/exu/exu_alu_ctl.sv
       - design/exu/exu_mul_ctl.sv
       - design/exu/exu_div_ctl.sv
+      - design/exu/exu_posit_add_ctl.sv
+      - design/exu/exu_posit_mul_ctl.sv
+      - design/exu/exu_posit_div_ctl.sv
+      - design/exu/exu_posu_ctl.sv
       - design/exu/exu.sv
       - design/lsu/lsu.sv
       - design/lsu/lsu_bus_buffer.sv

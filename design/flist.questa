@@ -20,12 +20,17 @@ $RV_ROOT/design/ifu/ifu.sv
 $RV_ROOT/design/dec/dec_decode_ctl.sv
 $RV_ROOT/design/dec/dec_gpr_ctl.sv
 $RV_ROOT/design/dec/dec_ib_ctl.sv
+$RV_ROOT/design/dec/dec_pr_ctl.sv
 $RV_ROOT/design/dec/dec_tlu_ctl.sv
 $RV_ROOT/design/dec/dec_trigger.sv
 $RV_ROOT/design/dec/dec.sv
 $RV_ROOT/design/exu/exu_alu_ctl.sv
 $RV_ROOT/design/exu/exu_mul_ctl.sv
 $RV_ROOT/design/exu/exu_div_ctl.sv
+$RV_ROOT/design/exu/exu_posit_add_ctl.sv
+$RV_ROOT/design/exu/exu_posit_mul_ctl.sv
+$RV_ROOT/design/exu/exu_posit_div_ctl.sv
+$RV_ROOT/design/exu/exu_posu_ctl.sv
 $RV_ROOT/design/exu/exu.sv
 $RV_ROOT/design/lsu/lsu.sv
 $RV_ROOT/design/lsu/lsu_clkdomain.sv

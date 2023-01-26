@@ -143,6 +143,10 @@ module dec
    input logic [31:0]  exu_div_result,      // final div result
    input logic exu_div_finish,              // cycle div finishes
 
+   input logic [31:0] exu_posu_result,      // Posit operation result
+   input logic exu_posu_finish,             // Posit operation is finished
+   input logic exu_posu_stall,              // Posit operation is running
+
    input logic [31:0] exu_mul_result_e3,    // 32b mul result
 
    input logic [31:0] exu_csr_rs1_e1,       // rs1 for csr instruction
@@ -260,6 +264,9 @@ module dec
    output logic  [31:0] gpr_i1_rs1_d,
    output logic  [31:0] gpr_i1_rs2_d,
 
+   output logic  [31:0] pr_rs1_d,                   // pr rs1 data
+   output logic  [31:0] pr_rs2_d,                   // pr rs2 data
+
    output logic [31:0] dec_i0_immed_d,              // immediate data
    output logic [31:0] dec_i1_immed_d,
 
@@ -291,6 +298,7 @@ module dec
    output lsu_pkt_t    lsu_p,                      // lsu packet
    output mul_pkt_t    mul_p,                      // mul packet
    output div_pkt_t    div_p,                      // div packet
+   output posu_pkt_t   posu_p,                     // posit unit packet
 
    output logic [11:0] dec_lsu_offset_d,           // 12b offset for load/store addresses
    output logic        dec_i0_lsu_d,               // is load/store
@@ -398,6 +406,9 @@ module dec
    output logic  dec_tlu_dccm_clk_override,          // override DCCM clock domain gating
    output logic  dec_tlu_icm_clk_override,           // override ICCM clock domain gating
 
+   output logic dec_i0_posu_d,
+   output logic dec_i1_posu_d,
+
    input  logic        scan_mode
 
    );
@@ -425,6 +436,16 @@ module dec
    logic [4:0]  dec_i0_rs1_d;
    logic [4:0]  dec_i0_rs2_d;
 
+   logic dec_i0_posu_write_wb;
+   logic dec_i1_posu_write_wb;
+
+   logic [4:0]    pr_raddr0_d;
+   logic [4:0]    pr_raddr1_d;
+   logic          pr_rden0_d;
+   logic          pr_rden1_d;
+   logic [4:0]    pr_waddr_d;
+   logic          pr_wen_d;
+   logic [31:0]   pr_wd_d;
 
    logic        dec_i1_rs1_en_d;
    logic        dec_i1_rs2_en_d;
@@ -526,14 +547,48 @@ module dec
                     .raddr2(dec_i1_rs1_d[4:0]), .rden2(dec_i1_rs1_en_d),
                     .raddr3(dec_i1_rs2_d[4:0]), .rden3(dec_i1_rs2_en_d),
 
-                    .waddr0(dec_i0_waddr_wb[4:0]),         .wen0(dec_i0_wen_wb),         .wd0(dec_i0_wdata_wb[31:0]),
-                    .waddr1(dec_i1_waddr_wb[4:0]),         .wen1(dec_i1_wen_wb),         .wd1(dec_i1_wdata_wb[31:0]),
-                    .waddr2(dec_nonblock_load_waddr[4:0]), .wen2(dec_nonblock_load_wen), .wd2(lsu_nonblock_load_data[31:0]),
+                    .waddr0(dec_i0_waddr_wb[4:0]),         .wen0(dec_i0_wen_wb & ~dec_i0_posu_write_wb), .wd0(dec_i0_wdata_wb[31:0]),
+                    .waddr1(dec_i1_waddr_wb[4:0]),         .wen1(dec_i1_wen_wb & ~dec_i1_posu_write_wb), .wd1(dec_i1_wdata_wb[31:0]),
+                    .waddr2(dec_nonblock_load_waddr[4:0]), .wen2(dec_nonblock_load_wen),                 .wd2(lsu_nonblock_load_data[31:0]),
 
                     // outputs
                     .rd0(gpr_i0_rs1_d[31:0]), .rd1(gpr_i0_rs2_d[31:0]),
                     .rd2(gpr_i1_rs1_d[31:0]), .rd3(gpr_i1_rs2_d[31:0])
                     );
+
+
+   // Posit register file inputs
+   assign pr_raddr0_d[4:0] =  ({ 5{  dec_i0_posu_d                               }} & dec_i0_rs1_d[4:0]) |
+                              ({ 5{ ~dec_i0_posu_d & dec_i1_posu_d               }} & dec_i1_rs1_d[4:0]);
+   assign pr_raddr1_d[4:0] =  ({ 5{  dec_i0_posu_d                               }} & dec_i0_rs2_d[4:0]) |
+                              ({ 5{ ~dec_i0_posu_d & dec_i1_posu_d               }} & dec_i1_rs2_d[4:0]);
+   assign pr_waddr_d[4:0]  =  ({ 5{  dec_i0_posu_write_wb                        }} & dec_i0_waddr_wb[4:0]) |
+                              ({ 5{ ~dec_i0_posu_write_wb & dec_i1_posu_write_wb }} & dec_i1_waddr_wb[4:0]);
+   assign pr_wd_d[31:0]    =  ({32{  dec_i0_posu_write_wb                        }} & dec_i0_wdata_wb[31:0]) |
+                              ({32{ ~dec_i0_posu_write_wb & dec_i1_posu_write_wb }} & dec_i1_wdata_wb[31:0]);
+   assign pr_rden0_d       =  (      dec_i0_posu_d                                  & dec_i0_rs1_en_d ) |
+                              (     ~dec_i0_posu_d & dec_i1_posu_d                  & dec_i1_rs1_en_d );
+   assign pr_rden1_d       =  (      dec_i0_posu_d                                  & dec_i0_rs2_en_d ) |
+                              (     ~dec_i0_posu_d & dec_i1_posu_d                  & dec_i1_rs2_en_d );
+   assign pr_wen_d         =  (      dec_i0_posu_write_wb                           & dec_i0_wen_wb ) |
+                              (     ~dec_i0_posu_write_wb & dec_i1_posu_write_wb    & dec_i1_wen_wb );
+
+   dec_pr_ctl prf (.*,
+                   // inputs
+                   .raddr0(pr_raddr0_d[4:0]),
+                   .rden0(pr_rden0_d),
+
+                   .raddr1(pr_raddr1_d[4:0]),
+                   .rden1(pr_rden1_d),
+
+                   .waddr(pr_waddr_d[4:0]),
+                   .wen(pr_wen_d),
+                   .wd(pr_wd_d[31:0]),
+
+                   // outputs
+                   .rd0(pr_rs1_d[31:0]),
+                   .rd1(pr_rs2_d[31:0])
+                   );
 
 // Trigger
 

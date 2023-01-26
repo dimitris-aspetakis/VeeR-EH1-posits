@@ -602,6 +602,9 @@ module veer
    logic  [31:0] gpr_i1_rs1_d;
    logic  [31:0] gpr_i1_rs2_d;
 
+   logic  [31:0] pr_rs1_d;
+   logic  [31:0] pr_rs2_d;
+
    logic [31:0] i0_rs1_bypass_data_d;
    logic [31:0] i0_rs2_bypass_data_d;
    logic [31:0] i1_rs1_bypass_data_d;
@@ -668,6 +671,9 @@ module veer
 
    lsu_pkt_t    lsu_p;
 
+   logic dec_i0_posu_d;
+   logic dec_i1_posu_d;
+
    logic [11:0] dec_lsu_offset_d;
    logic        dec_i0_lsu_d;       // chose which gpr value to use
    logic        dec_i1_lsu_d;
@@ -722,10 +728,15 @@ module veer
    logic dec_i1_mul_d;
 
    div_pkt_t  div_p;
+   posu_pkt_t posu_p;
 
    logic [31:0] exu_div_result;
    logic exu_div_finish;
    logic exu_div_stall;
+
+   logic [31:0] exu_posu_result;
+   logic exu_posu_finish;
+   logic exu_posu_stall;
 
 
    logic dec_i0_div_d;

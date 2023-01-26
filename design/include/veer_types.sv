@@ -145,6 +145,8 @@ typedef struct packed {
                        } trap_pkt_t;
 
 typedef struct packed {
+                       logic i0posit;
+                       logic i1posit;
                        logic [4:0] i0rd;
                        logic i0mul;
                        logic i0load;
@@ -211,6 +213,14 @@ typedef struct packed {
                        } alu_pkt_t;
 
 typedef struct packed {
+                       logic valid;
+                       logic add;
+                       logic sub;
+                       logic mul;
+                       logic div;
+                       } posu_pkt_t;
+
+typedef struct packed {
                        logic by;
                        logic half;
                        logic word;
@@ -219,6 +229,7 @@ typedef struct packed {
                        logic store;
                        logic unsign;
                        logic dma;    // dma pkt
+                       logic posit;
                        logic store_data_bypass_c1;
                        logic load_ldst_bypass_c1;
                        logic store_data_bypass_c2;
@@ -240,6 +251,11 @@ typedef struct packed {
                       } lsu_error_pkt_t;
 
 typedef struct packed {
+                       logic posit;
+                       logic padd;
+                       logic psub;
+                       logic pmul;
+                       logic pdiv;
                        logic alu;
                        logic rs1;
                        logic rs2;

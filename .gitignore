@@ -1,4 +1,8 @@
 # Exclude/Ignore file for git
+obj_dir/
+program.hex
+trace_port.csv
+verilator-build
 *.log
 RCS
 *~

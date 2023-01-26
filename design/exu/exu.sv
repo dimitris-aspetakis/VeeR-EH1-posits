@@ -76,6 +76,13 @@ module exu
 
    input logic [31:0] gpr_i0_rs1_d,                                    // DEC data gpr
    input logic [31:0] gpr_i0_rs2_d,                                    // DEC data gpr
+
+   input logic dec_i0_posu_d,
+   input logic dec_i1_posu_d,
+
+   input logic [31:0] pr_rs1_d,                                        // DEC data pr
+   input logic [31:0] pr_rs2_d,                                        // DEC data pr
+
    input logic [31:0] dec_i0_immed_d,                                  // DEC data immediate
 
    input logic [31:0] gpr_i1_rs1_d,                                    // DEC data gpr
@@ -130,6 +137,7 @@ module exu
    input mul_pkt_t  mul_p,                                             // DEC {valid, operand signs, low, operand bypass}
 
    input div_pkt_t  div_p,                                             // DEC {valid, unsigned, rem}
+   input posu_pkt_t posu_p,                                            // DEC {valid, add, sub, mul, div}
 
    input logic   dec_i0_lsu_d,                                         // Bypass control for LSU operand bus
    input logic   dec_i1_lsu_d,                                         // Bypass control for LSU operand bus
@@ -150,6 +158,10 @@ module exu
    output logic exu_div_finish,                                        // Divide is finished
    output logic exu_div_stall,                                         // Divide is running
    output logic [31:1] exu_npc_e4,                                     // Divide NPC
+
+   output logic [31:0] exu_posu_result,                                // Posit operation result
+   output logic exu_posu_finish,                                       // Posit operation is finished
+   output logic exu_posu_stall,                                        // Posit operation is running
 
    output logic exu_i0_flush_lower_e4,                                 // to TLU - lower branch flush
    output logic exu_i1_flush_lower_e4,                                 // to TLU - lower branch flush
@@ -300,10 +312,12 @@ module exu
                                  ({32{  dec_i0_rs1_bypass_en_d &  dec_i0_lsu_d               }} & i0_rs1_bypass_data_d[31:0]) |
                                  ({32{  dec_i1_rs1_bypass_en_d & ~dec_i0_lsu_d & dec_i1_lsu_d}} & i1_rs1_bypass_data_d[31:0]);
 
-   assign exu_lsu_rs2_d[31:0]  = ({32{ ~dec_i0_rs2_bypass_en_d &  dec_i0_lsu_d               }} & gpr_i0_rs2_d[31:0]        ) |
-                                 ({32{ ~dec_i1_rs2_bypass_en_d & ~dec_i0_lsu_d & dec_i1_lsu_d}} & gpr_i1_rs2_d[31:0]        ) |
-                                 ({32{  dec_i0_rs2_bypass_en_d &  dec_i0_lsu_d               }} & i0_rs2_bypass_data_d[31:0]) |
-                                 ({32{  dec_i1_rs2_bypass_en_d & ~dec_i0_lsu_d & dec_i1_lsu_d}} & i1_rs2_bypass_data_d[31:0]);
+   assign exu_lsu_rs2_d[31:0]  = ({32{ ~dec_i0_rs2_bypass_en_d &  dec_i0_lsu_d & ~dec_i0_posu_d                   }} & gpr_i0_rs2_d[31:0] )        |
+                                 ({32{ ~dec_i1_rs2_bypass_en_d & ~dec_i0_lsu_d &  dec_i1_lsu_d  & ~dec_i1_posu_d  }} & gpr_i1_rs2_d[31:0] )        |
+                                 ({32{ ~dec_i0_rs2_bypass_en_d &  dec_i0_lsu_d &  dec_i0_posu_d                   }} & pr_rs2_d[31:0] )            |
+                                 ({32{ ~dec_i1_rs2_bypass_en_d & ~dec_i0_lsu_d &  dec_i1_lsu_d  &  dec_i1_posu_d  }} & pr_rs2_d[31:0] )            |
+                                 ({32{  dec_i0_rs2_bypass_en_d &  dec_i0_lsu_d                                    }} & i0_rs2_bypass_data_d[31:0]) |
+                                 ({32{  dec_i1_rs2_bypass_en_d & ~dec_i0_lsu_d & dec_i1_lsu_d                     }} & i1_rs2_bypass_data_d[31:0]);
 
    assign mul_rs1_d[31:0]      = ({32{ ~dec_i0_rs1_bypass_en_d &  dec_i0_mul_d               }} & gpr_i0_rs1_d[31:0]        ) |
                                  ({32{ ~dec_i1_rs1_bypass_en_d & ~dec_i0_mul_d & dec_i1_mul_d}} & gpr_i1_rs1_d[31:0]        ) |
@@ -367,6 +381,15 @@ module exu
                           .finish_early  ( div_finish_early            ),   // O
                           .finish        ( exu_div_finish              ),   // O
                           .out           ( exu_div_result[31:0]        ));  // O
+
+
+   exu_posu_ctl posu_e1  (.*,
+                          .dp            ( posu_p                      ),   // I
+                          .a             ( pr_rs1_d[31:0]              ),   // I
+                          .b             ( pr_rs2_d[31:0]              ),   // I
+                          .posu_stall    ( exu_posu_stall              ),   // O
+                          .finish        ( exu_posu_finish             ),   // O
+                          .out           ( exu_posu_result[31:0]       ));  // O
 
 
    predict_pkt_t i0_predict_newp_d, i1_predict_newp_d;

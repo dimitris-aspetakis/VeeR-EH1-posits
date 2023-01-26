@@ -1,6 +1,11 @@
 
 .definition
 
+padd =    [0000000..........000.....1011011]
+psub =    [0000001..........000.....1011011]
+pmul =    [0000000..........001.....1011011]
+pdiv =    [0000001..........001.....1011011]
+
 add =     [0000000..........000.....0110011]
 addi =    [.................000.....0010011]
 
@@ -45,10 +50,12 @@ jalr =    [.................000.....1100111]
 lb =      [.................000.....0000011]
 lh =      [.................001.....0000011]
 lw =      [.................010.....0000011]
+plw =     [.................010.....0001011]
 
 sb =      [.................000.....0100011]
 sh =      [.................001.....0100011]
 sw =      [.................010.....0100011]
+psw =     [.................010.....0101011]
 
 lbu =     [.................100.....0000011]
 lhu =     [.................101.....0000011]
@@ -158,6 +165,11 @@ rv32i = {
 .output
 
 rv32i = {
+      posit
+      padd
+      psub
+      pmul
+      pdiv
       alu
       rs1
       rs2
@@ -210,6 +222,11 @@ rv32i = {
 }
 
 .decode
+
+rv32i[padd]   = { posit rs1 rs2 rd padd }
+rv32i[psub]   = { posit rs1 rs2 rd psub }
+rv32i[pmul]   = { posit rs1 rs2 rd pmul }
+rv32i[pdiv]   = { posit rs1 rs2 rd pdiv }
 
 rv32i[mul]    = { mul rs1 rs2 rd low }
 rv32i[mulh]   = { mul rs1 rs2 rd rs1_sign rs2_sign }
@@ -268,10 +285,12 @@ rv32i[lh] =      { lsu load rs1 rd half  }
 rv32i[lw] =      { lsu load rs1 rd word  }
 rv32i[lbu] =     { lsu load rs1 rd by   unsign  }
 rv32i[lhu] =     { lsu load rs1 rd half unsign  }
+rv32i[plw] =     { lsu load rs1 rd word posit }
 
 rv32i[sb] =      { lsu store rs1 rs2 by   }
 rv32i[sh] =      { lsu store rs1 rs2 half }
 rv32i[sw] =      { lsu store rs1 rs2 word }
+rv32i[psw] =     { lsu store rs1 rs2 word posit }
 
 
 rv32i[fence] =   { alu lor fence presync}
