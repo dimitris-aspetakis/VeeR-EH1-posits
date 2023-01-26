@@ -2272,7 +2272,7 @@ end : cam_array
    assign dec_i1_wdata_wb[31:0] = i1_result_wb[31:0];
 
    assign dec_i0_posu_write_wb = wbd.i0posit & ~wbd.i0store;
-   assign dec_i0_posu_write_wb = wbd.i1posit & ~wbd.i1store;
+   assign dec_i1_posu_write_wb = wbd.i1posit & ~wbd.i1store;
 
 // divide stuff
 

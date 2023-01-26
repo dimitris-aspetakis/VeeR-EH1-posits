@@ -1,5 +1,5 @@
-export TEST      = test01
-export OFILES    = test01.o
+export TEST      = test_plw_psw
+export OFILES    = test_plw_psw.o
 export BUILD_DIR = ../snapshots/default
 
 clean .DEFAULT:
