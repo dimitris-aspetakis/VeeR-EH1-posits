@@ -177,10 +177,12 @@ module dec_decode_ctl
 
    output logic [4:0]  dec_i0_waddr_wb,         // i0 logical source to write to gpr's
    output logic          dec_i0_wen_wb,         // i0 write enable
+   output logic          dec_i0_wen_pr_wb,      // i0 posit registers write enable
    output logic [31:0] dec_i0_wdata_wb,         // i0 write data
 
    output logic [4:0]  dec_i1_waddr_wb,
    output logic          dec_i1_wen_wb,
+   output logic          dec_i1_wen_pr_wb,      // i1 posit registers write enable
    output logic [31:0] dec_i1_wdata_wb,
 
    output logic          dec_i0_select_pc_d,    // i0 select pc for rs1 - branches
@@ -1095,8 +1097,8 @@ end : cam_array
    assign dec_i0_div_d = i0_dp.div;
    assign dec_i1_div_d = i1_dp.div;
 
-   assign dec_i0_posu_d = i0_posu_instr;
-   assign dec_i1_posu_d = i1_posu_instr;
+   assign dec_i0_posu_d = i0_dp.posit;
+   assign dec_i1_posu_d = i1_dp.posit;
 
    assign div_p.valid = div_decode_d;
 
@@ -2259,15 +2261,17 @@ end : cam_array
    assign dec_i0_waddr_wb[4:0] = wbd.i0rd[4:0];
 
    // squash same write, take last write assuming we don't kill the I1 write for some reason.
-   assign     i0_wen_wb = wbd.i0v & ~(~dec_tlu_i1_kill_writeb_wb & ~i1_load_kill_wen & wbd.i0v & wbd.i1v & (wbd.i0rd[4:0] == wbd.i1rd[4:0])) & ~dec_tlu_i0_kill_writeb_wb;
+   assign     i0_wen_wb = wbd.i0v & ~wbd.i0posit & ~(~dec_tlu_i1_kill_writeb_wb & ~i1_load_kill_wen & wbd.i0v & wbd.i1v & (wbd.i0rd[4:0] == wbd.i1rd[4:0])) & ~dec_tlu_i0_kill_writeb_wb;
    assign dec_i0_wen_wb = i0_wen_wb & ~i0_load_kill_wen;  // don't write a nonblock load 1st time down the pipe
+   assign dec_i0_wen_pr_wb = wbd.i0v & wbd.i0posit & ~(~dec_tlu_i1_kill_writeb_wb & ~i1_load_kill_wen & wbd.i0v & wbd.i1v & (wbd.i0rd[4:0] == wbd.i1rd[4:0])) & ~dec_tlu_i0_kill_writeb_wb & ~i0_load_kill_wen;
 
    assign dec_i0_wdata_wb[31:0] = i0_result_wb[31:0];
 
    assign dec_i1_waddr_wb[4:0] = wbd.i1rd[4:0];
 
-   assign     i1_wen_wb = wbd.i1v & ~dec_tlu_i1_kill_writeb_wb;
+   assign     i1_wen_wb = wbd.i1v & ~wbd.i1posit & ~dec_tlu_i1_kill_writeb_wb;
    assign dec_i1_wen_wb = i1_wen_wb & ~i1_load_kill_wen;
+   assign dec_i1_wen_pr_wb = wbd.i1v & wbd.i1posit & ~dec_tlu_i1_kill_writeb_wb & ~i1_load_kill_wen;
 
    assign dec_i1_wdata_wb[31:0] = i1_result_wb[31:0];
 

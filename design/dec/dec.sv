@@ -462,10 +462,12 @@ module dec
 
    logic [4:0]  dec_i0_waddr_wb;
    logic        dec_i0_wen_wb;
+   logic        dec_i0_wen_pr_wb;
    logic [31:0] dec_i0_wdata_wb;
 
    logic [4:0]  dec_i1_waddr_wb;
    logic        dec_i1_wen_wb;
+   logic        dec_i1_wen_pr_wb;
    logic [31:0] dec_i1_wdata_wb;
 
    logic        dec_csr_wen_wb;      // csr write enable at wb
@@ -547,8 +549,8 @@ module dec
                     .raddr2(dec_i1_rs1_d[4:0]), .rden2(dec_i1_rs1_en_d),
                     .raddr3(dec_i1_rs2_d[4:0]), .rden3(dec_i1_rs2_en_d),
 
-                    .waddr0(dec_i0_waddr_wb[4:0]),         .wen0(dec_i0_wen_wb & ~dec_i0_posu_write_wb), .wd0(dec_i0_wdata_wb[31:0]),
-                    .waddr1(dec_i1_waddr_wb[4:0]),         .wen1(dec_i1_wen_wb & ~dec_i1_posu_write_wb), .wd1(dec_i1_wdata_wb[31:0]),
+                    .waddr0(dec_i0_waddr_wb[4:0]),         .wen0(dec_i0_wen_wb), .wd0(dec_i0_wdata_wb[31:0]),
+                    .waddr1(dec_i1_waddr_wb[4:0]),         .wen1(dec_i1_wen_wb), .wd1(dec_i1_wdata_wb[31:0]),
                     .waddr2(dec_nonblock_load_waddr[4:0]), .wen2(dec_nonblock_load_wen),                 .wd2(lsu_nonblock_load_data[31:0]),
 
                     // outputs
@@ -570,8 +572,8 @@ module dec
                               (     ~dec_i0_posu_d & dec_i1_posu_d                  & dec_i1_rs1_en_d );
    assign pr_rden1_d       =  (      dec_i0_posu_d                                  & dec_i0_rs2_en_d ) |
                               (     ~dec_i0_posu_d & dec_i1_posu_d                  & dec_i1_rs2_en_d );
-   assign pr_wen_d         =  (      dec_i0_posu_write_wb                           & dec_i0_wen_wb ) |
-                              (     ~dec_i0_posu_write_wb & dec_i1_posu_write_wb    & dec_i1_wen_wb );
+   assign pr_wen_d         =  (      dec_i0_posu_write_wb                           & dec_i0_wen_pr_wb ) |
+                              (     ~dec_i0_posu_write_wb & dec_i1_posu_write_wb    & dec_i1_wen_pr_wb );
 
    dec_pr_ctl prf (.*,
                    // inputs

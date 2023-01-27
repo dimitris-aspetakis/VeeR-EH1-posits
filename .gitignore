@@ -3,6 +3,7 @@ obj_dir/
 program.hex
 trace_port.csv
 verilator-build
+sim.vcd
 *.log
 RCS
 *~
