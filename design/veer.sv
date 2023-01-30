@@ -645,6 +645,9 @@ module veer
    logic         dec_i0_alu_decode_d;
    logic         dec_i1_alu_decode_d;
 
+   logic         dec_i0_posu_decode_d;
+   logic         dec_i1_posu_decode_d;
+
    rets_pkt_t exu_rets_e1_pkt;
    rets_pkt_t exu_rets_e4_pkt;
 

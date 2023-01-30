@@ -279,6 +279,9 @@ module dec
    output logic          dec_i0_alu_decode_d,       // alu schedule on primary alu
    output logic          dec_i1_alu_decode_d,
 
+   output logic          dec_i0_posu_decode_d,
+   output logic          dec_i1_posu_decode_d,
+
    output logic          dec_i0_select_pc_d,        // select pc onto rs1 for jal's
    output logic          dec_i1_select_pc_d,
 
@@ -436,8 +439,8 @@ module dec
    logic [4:0]  dec_i0_rs1_d;
    logic [4:0]  dec_i0_rs2_d;
 
-   logic dec_i0_posu_write_wb;
-   logic dec_i1_posu_write_wb;
+   logic dec_i0_plw_wb;
+   logic dec_i1_plw_wb;
 
    logic [4:0]    pr_raddr0_d;
    logic [4:0]    pr_raddr1_d;
@@ -527,6 +530,9 @@ module dec
 
    logic                      dec_pause_state;
 
+   logic [4:0]                dec_posu_rf_waddr_d;
+   logic                      dec_posu_rf_wen_d;
+
    br_pkt_t dec_i0_brp;
    br_pkt_t dec_i1_brp;
 
@@ -564,16 +570,16 @@ module dec
                               ({ 5{ ~dec_i0_posu_d & dec_i1_posu_d               }} & dec_i1_rs1_d[4:0]);
    assign pr_raddr1_d[4:0] =  ({ 5{  dec_i0_posu_d                               }} & dec_i0_rs2_d[4:0]) |
                               ({ 5{ ~dec_i0_posu_d & dec_i1_posu_d               }} & dec_i1_rs2_d[4:0]);
-   assign pr_waddr_d[4:0]  =  ({ 5{  dec_i0_posu_write_wb                        }} & dec_i0_waddr_wb[4:0]) |
-                              ({ 5{ ~dec_i0_posu_write_wb & dec_i1_posu_write_wb }} & dec_i1_waddr_wb[4:0]);
-   assign pr_wd_d[31:0]    =  ({32{  dec_i0_posu_write_wb                        }} & dec_i0_wdata_wb[31:0]) |
-                              ({32{ ~dec_i0_posu_write_wb & dec_i1_posu_write_wb }} & dec_i1_wdata_wb[31:0]);
    assign pr_rden0_d       =  (      dec_i0_posu_d                                  & dec_i0_rs1_en_d ) |
                               (     ~dec_i0_posu_d & dec_i1_posu_d                  & dec_i1_rs1_en_d );
    assign pr_rden1_d       =  (      dec_i0_posu_d                                  & dec_i0_rs2_en_d ) |
                               (     ~dec_i0_posu_d & dec_i1_posu_d                  & dec_i1_rs2_en_d );
-   assign pr_wen_d         =  (      dec_i0_posu_write_wb                           & dec_i0_wen_pr_wb ) |
-                              (     ~dec_i0_posu_write_wb & dec_i1_posu_write_wb    & dec_i1_wen_pr_wb );
+   assign pr_waddr_d[4:0]  =  ({ 5{  dec_i0_plw_wb                        }} & dec_i0_waddr_wb[4:0]) |
+                              ({ 5{ ~dec_i0_plw_wb & dec_i1_plw_wb }} & dec_i1_waddr_wb[4:0]);
+   assign pr_wd_d[31:0]    =  ({32{  dec_i0_plw_wb                        }} & dec_i0_wdata_wb[31:0]) |
+                              ({32{ ~dec_i0_plw_wb & dec_i1_plw_wb }} & dec_i1_wdata_wb[31:0]);
+   assign pr_wen_d         =  (      dec_i0_plw_wb                           & dec_i0_wen_pr_wb ) |
+                              (     ~dec_i0_plw_wb & dec_i1_plw_wb    & dec_i1_wen_pr_wb );
 
    dec_pr_ctl prf (.*,
                    // inputs
@@ -583,9 +589,12 @@ module dec
                    .raddr1(pr_raddr1_d[4:0]),
                    .rden1(pr_rden1_d),
 
-                   .waddr(pr_waddr_d[4:0]),
-                   .wen(pr_wen_d),
-                   .wd(pr_wd_d[31:0]),
+                   .waddr( ({ 5{  dec_posu_rf_wen_d                                                   }} & dec_posu_rf_waddr_d[4:0]) |
+                           ({ 5{ ~dec_posu_rf_wen_d & (dec_i0_plw_wb | dec_i1_plw_wb)   }} & pr_waddr_d[4:0])),
+                   .wen(   (      dec_posu_rf_wen_d & dec_posu_rf_wen_d) |
+                           (     ~dec_posu_rf_wen_d & (dec_i0_plw_wb | dec_i1_plw_wb) & pr_wen_d)),
+                   .wd(    ({ 32{   dec_posu_rf_wen_d }} & exu_posu_result[31:0]) |
+                           ({ 32{  ~dec_posu_rf_wen_d & (dec_i0_plw_wb | dec_i1_plw_wb) }} & pr_wd_d[31:0])),
 
                    // outputs
                    .rd0(pr_rs1_d[31:0]),

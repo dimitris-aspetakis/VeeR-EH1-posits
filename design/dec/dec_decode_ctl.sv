@@ -168,6 +168,8 @@ module dec_decode_ctl
    output logic          dec_i0_alu_decode_d,   // decode to primary alu's
    output logic          dec_i1_alu_decode_d,
 
+   output logic          dec_i0_posu_decode_d,
+   output logic          dec_i1_posu_decode_d,
 
    output logic [31:0] i0_rs1_bypass_data_d,    // i0 rs1 bypass data
    output logic [31:0] i0_rs2_bypass_data_d,    // i0 rs2 bypass data
@@ -184,6 +186,9 @@ module dec_decode_ctl
    output logic          dec_i1_wen_wb,
    output logic          dec_i1_wen_pr_wb,      // i1 posit registers write enable
    output logic [31:0] dec_i1_wdata_wb,
+
+   output logic [4:0]    dec_posu_rf_waddr_d,
+   output logic          dec_posu_rf_wen_d,
 
    output logic          dec_i0_select_pc_d,    // i0 select pc for rs1 - branches
    output logic          dec_i1_select_pc_d,
@@ -210,8 +215,8 @@ module dec_decode_ctl
    output logic        dec_i1_div_d,
    output logic        dec_i0_posu_d,        // chose which pr value to use (decode stage)
    output logic        dec_i1_posu_d,        // chose which pr value to use (decode stage)
-   output logic        dec_i0_posu_write_wb, // chose which pr value to use on a posit register write
-   output logic        dec_i1_posu_write_wb, // chose which pr value to use on a posit register write
+   output logic        dec_i0_plw_wb, // chose which pr value to use on a posit register write
+   output logic        dec_i1_plw_wb, // chose which pr value to use on a posit register write
 
    // review
    output logic        flush_final_e3,      // flush final at e3: i0  or i1
@@ -388,8 +393,6 @@ module dec_decode_ctl
    logic        i0_secondary_block_d, i1_secondary_block_d;
    logic        non_block_case_d;
    logic        i0_div_decode_d;
-   logic        i0_posu_decode_d;
-   logic        i1_posu_decode_d;
    logic        posu_decode_d;
    logic [31:0] i0_result_e4_final, i1_result_e4_final;
    logic        i0_load_block_d;
@@ -465,7 +468,6 @@ module dec_decode_ctl
    logic       i1_ap_pc2, i1_ap_pc4;
 
    logic        div_wen_wb;
-   logic        posu_wen_wb;
    logic        i0_rd_en_d;
    logic        i1_rd_en_d;
    logic [4:0]  i1_rd_d;
@@ -577,8 +579,6 @@ module dec_decode_ctl
    logic       e4d_i0load;
 
    logic [4:0] div_waddr_wb;
-   logic [4:0] i0_posu_waddr_wb;
-   logic [4:0] i1_posu_waddr_wb;
    logic [12:1] last_br_immed_e1, last_br_immed_e2;
    logic [31:0]        i0_inst_d, i1_inst_d;
    logic [31:0]        i0_inst_e1, i1_inst_e1;
@@ -592,6 +592,8 @@ module dec_decode_ctl
    logic [31:1] i0_pc_wb, i0_pc_wb1;
    logic [31:1]           i1_pc_wb1;
    logic [31:1] last_pc_e2;
+
+   logic [4:0] posit_waddr;
 
    reg_pkt_t i0r, i1r;
 
@@ -1500,6 +1502,9 @@ end : cam_array
    assign dec_i0_alu_decode_d = i0_legal_decode_d & i0_dp.alu & ~i0_secondary_d;
    assign dec_i1_alu_decode_d = dec_i1_decode_d & i1_dp.alu & ~i1_secondary_d;
 
+   assign dec_i0_posu_decode_d = i0_legal_decode_d & i0_posu_instr;
+   assign dec_i1_posu_decode_d = dec_i1_decode_d & i1_posu_instr;
+
    assign dec_i0_lsu_decode_d = i0_legal_decode_d & i0_dp.lsu;
 
    assign lsu_decode_d = (i0_legal_decode_d & i0_dp.lsu) |
@@ -2237,26 +2242,24 @@ end : cam_array
         e4d_in = e4d;
 
 
-      e4d_in.i0rd[4:0] = (exu_div_finish)   ? div_waddr_wb[4:0] :
-                         ((exu_posu_finish) ? i0_posu_waddr_wb[4:0] : e4d.i0rd[4:0]);
-      e4d_in.i1rd[4:0] =  (exu_posu_finish) ? i1_posu_waddr_wb[4:0] : e4d.i1rd[4:0];
+      e4d_in.i0rd[4:0] = (exu_div_finish)   ? div_waddr_wb[4:0] : e4d.i0rd[4:0];
+      e4d_in.i1rd[4:0] =  e4d.i1rd[4:0];
 
-      e4d_in.i0v = (e4d.i0v & ~e4d.i0div & ~flush_lower_wb) | (exu_div_finish & div_waddr_wb[4:0]!=5'b0)
-                   | (exu_posu_finish & i0_posu_waddr_wb[4:0]!=5'b0);
+      e4d_in.i0v = (e4d.i0v & ~e4d.i0div & ~flush_lower_wb) | (exu_div_finish & div_waddr_wb[4:0]!=5'b0);
       e4d_in.i0valid = (e4d.i0valid              & ~flush_lower_wb) | exu_div_finish;
       // qual the following with div finish; necessary for divides with early exit
       e4d_in.i0secondary = e4d.i0secondary & ~flush_lower_wb & ~exu_div_finish;
       e4d_in.i0load = e4d.i0load & ~flush_lower_wb & ~exu_div_finish;
       e4d_in.i0store = e4d.i0store & ~flush_lower_wb & ~exu_div_finish;
 
-      e4d_in.i1v = (e4d.i1v & ~flush_lower_wb) | (exu_posu_finish & i1_posu_waddr_wb[4:0]!=5'b0);
+      e4d_in.i1v = e4d.i1v & ~flush_lower_wb;
       e4d_in.i1valid = e4d.i1valid & ~flush_lower_wb;
       e4d_in.i1secondary = e3d.i1secondary & ~flush_lower_wb;
 
    end
 
 
-   rvdffe #( $bits(dest_pkt_t) ) wbff (.*, .en(i0_wb_ctl_en | exu_div_finish | div_wen_wb | exu_posu_finish | posu_wen_wb), .din(e4d_in), .dout(wbd));
+   rvdffe #( $bits(dest_pkt_t) ) wbff (.*, .en(i0_wb_ctl_en | exu_div_finish | div_wen_wb | exu_posu_finish), .din(e4d_in), .dout(wbd));
 
    assign dec_i0_waddr_wb[4:0] = wbd.i0rd[4:0];
 
@@ -2275,8 +2278,14 @@ end : cam_array
 
    assign dec_i1_wdata_wb[31:0] = i1_result_wb[31:0];
 
-   assign dec_i0_posu_write_wb = wbd.i0posit & ~wbd.i0store;
-   assign dec_i1_posu_write_wb = wbd.i1posit & ~wbd.i1store;
+   assign dec_i0_plw_wb = wbd.i0posit & wbd.i0load;
+   assign dec_i1_plw_wb = wbd.i1posit & wbd.i1load;
+
+   assign posit_waddr[4:0] =  ( {5{dec_i0_posu_decode_d}} & i0r.rd[4:0] ) |
+                              ( {5{dec_i1_posu_decode_d}} & i1r.rd[4:0] );
+
+   rvdff  #(1) posuwbff (.*, .clk(active_clk), .din(exu_posu_finish), .dout(dec_posu_rf_wen_d));
+   rvdffs #(5) positwaddrff (.*, .en(exu_posu_finish), .din(posit_waddr[4:0]), .dout(dec_posu_rf_waddr_d[4:0]));
 
 // divide stuff
 
@@ -2298,15 +2307,7 @@ end : cam_array
 
    // active_clk -> used for clockgating for wb stage ctl logic
    rvdff  #(1) divwbff  (.*, .clk(active_clk), .din(exu_div_finish), .dout(div_wen_wb));
-   rvdff  #(1) posuwbff (.*, .clk(active_clk), .din(exu_posu_finish), .dout(posu_wen_wb));
 
-
-
-   assign i0_posu_decode_d = i0_legal_decode_d & i0_posu_instr;
-   assign i1_posu_decode_d = ~i0_posu_decode_d & (dec_i1_decode_d & i1_posu_instr);
-
-   rvdffs #(5) i0posuwbaddrff (.*, .en(i0_posu_decode_d), .clk(active_clk), .din(i0r.rd[4:0]), .dout(i0_posu_waddr_wb[4:0]));
-   rvdffs #(5) i1posuwbaddrff (.*, .en(i1_posu_decode_d), .clk(active_clk), .din(i1r.rd[4:0]), .dout(i1_posu_waddr_wb[4:0]));
 
    assign i0_result_e1[31:0] = exu_i0_result_e1[31:0];
    assign i1_result_e1[31:0] = exu_i1_result_e1[31:0];
@@ -2338,10 +2339,9 @@ end : cam_array
    rvdffe #(32) i0wbresultff (.*, .en(i0_wb_data_en), .din(i0_result_e4_final[31:0]), .dout(i0_result_wb_raw[31:0]));
    rvdffe #(32) i1wbresultff (.*, .en(i1_wb_data_en), .din(i1_result_e4_final[31:0]), .dout(i1_result_wb_raw[31:0]));
 
-   assign i0_result_wb[31:0] = (  div_wen_wb) ? exu_div_result[31:0]  :
-                               ((posu_wen_wb) ? exu_posu_result[31:0] : i0_result_wb_raw[31:0]);
+   assign i0_result_wb[31:0] = (div_wen_wb) ? exu_div_result[31:0]  : i0_result_wb_raw[31:0];
 
-   assign i1_result_wb[31:0] = (posu_wen_wb) ? exu_posu_result[31:0] : i1_result_wb_raw[31:0];
+   assign i1_result_wb[31:0] = i1_result_wb_raw[31:0];
 
 
    rvdffe #(12) e1brpcff (.*, .en(i0_e1_data_en), .din(last_br_immed_d[12:1] ), .dout(last_br_immed_e1[12:1]));

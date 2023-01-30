@@ -103,6 +103,9 @@ module exu
    input logic   dec_i0_alu_decode_d,                                  // Valid to Primary ALU
    input logic   dec_i1_alu_decode_d,                                  // Valid to Primary ALU
 
+   input logic   dec_i0_posu_decode_d,                                 // Valid to posit unit
+   input logic   dec_i1_posu_decode_d,                                 // Valid to posit unit
+
    input logic   dec_i0_select_pc_d,                                   // PC select to RS1
    input logic   dec_i1_select_pc_d,                                   // PC select to RS1
 
@@ -384,12 +387,13 @@ module exu
 
 
    exu_posu_ctl posu_e1  (.*,
-                          .dp            ( posu_p                      ),   // I
-                          .a             ( pr_rs1_d[31:0]              ),   // I
-                          .b             ( pr_rs2_d[31:0]              ),   // I
-                          .posu_stall    ( exu_posu_stall              ),   // O
-                          .finish        ( exu_posu_finish             ),   // O
-                          .out           ( exu_posu_result[31:0]       ));  // O
+                          .valid         ( dec_i0_posu_decode_d | dec_i1_posu_decode_d ), // I
+                          .dp            ( posu_p                      ),                 // I
+                          .a             ( pr_rs1_d[31:0]              ),                 // I
+                          .b             ( pr_rs2_d[31:0]              ),                 // I
+                          .posu_stall    ( exu_posu_stall              ),                 // O
+                          .finish        ( exu_posu_finish             ),                 // O
+                          .out           ( exu_posu_result[31:0]       ));                // O
 
 
    predict_pkt_t i0_predict_newp_d, i1_predict_newp_d;

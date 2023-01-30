@@ -12,7 +12,7 @@ endfunction
 
 parameter N = 32;
 parameter Bs = log2(N);
-parameter es = 4;
+parameter es = 2;
 
 input [N-1:0] in1, in2;
 input start;
